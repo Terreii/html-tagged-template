@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { parse } from 'node:path'
 import standard from 'standard'
 
-import { html } from './index.js'
+import { html, render } from './index.js'
 
 test('standard formating', async t => {
   const results = await standard.lintFiles(['index.js', 'test.mjs'], { fix: true })
@@ -21,6 +21,33 @@ test('standard formating', async t => {
   }
 })
 
-test('exports', t => {
-  assert.strictEqual(typeof html, 'function', 'should export the html function')
+test('basic use', async t => {
+  await t.test('should return an iterator', () => {
+    const result = html`<h1>Hello World!</h1>`
+
+    assert.strictEqual(typeof result.next, 'function')
+    assert.deepStrictEqual(result.next(), { value: '<h1>Hello World!</h1>', done: false })
+    assert.deepStrictEqual(result.next(), { value: undefined, done: true })
+  })
+
+  await t.test('should return the end string part', () => {
+    const iterator = html`<h1>${'Hello!'}</h1>`
+    const result = Array.from(iterator).join('')
+
+    assert.strictEqual(result, '<h1>Hello!</h1>')
+  })
+
+  await t.test('should be usable in a Response with render', async () => {
+    const iterator = html`<h1>${42}</h1>`
+    const res = new Response(render(iterator))
+    const result = await res.text()
+    assert.strictEqual(result, '<h1>42</h1>')
+  })
+
+  await t.test('should toString all primitive values', () => {
+    const iterator = html`${null} ${undefined} ${true} ${false} ${0} ${1n} ${'some string'} ${Symbol('test')}`
+    const result = Array.from(iterator).join('')
+
+    assert.strictEqual(result, 'null undefined true false 0 1 some string test')
+  })
 })
