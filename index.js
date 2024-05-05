@@ -1,4 +1,5 @@
 exports.html = html
+exports.renderToString = renderToString
 exports.render = render
 
 function * html (strings, ...values) {
@@ -17,6 +18,10 @@ function * html (strings, ...values) {
   }
 
   yield strings[strings.length - 1]
+}
+
+function renderToString (iterator) {
+  return Array.from(iterator).join('')
 }
 
 function render (iterator) {

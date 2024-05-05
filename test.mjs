@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { parse } from 'node:path'
 import standard from 'standard'
 
-import { html, render } from './index.js'
+import { html, renderToString, render } from './index.js'
 
 test('standard formating', async t => {
   const results = await standard.lintFiles(['index.js', 'test.mjs'], { fix: true })
@@ -32,7 +32,7 @@ test('basic use', async t => {
 
   await t.test('should return the end string part', () => {
     const iterator = html`<h1>${'Hello!'}</h1>`
-    const result = Array.from(iterator).join('')
+    const result = renderToString(iterator)
 
     assert.strictEqual(result, '<h1>Hello!</h1>')
   })
@@ -46,7 +46,7 @@ test('basic use', async t => {
 
   await t.test('should toString all primitive values', () => {
     const iterator = html`${null} ${undefined} ${true} ${false} ${0} ${1n} ${'some string'} ${Symbol('test')}`
-    const result = Array.from(iterator).join('')
+    const result = renderToString(iterator)
 
     assert.strictEqual(result, 'null undefined true false 0 1 some string test')
   })
