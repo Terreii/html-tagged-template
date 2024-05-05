@@ -1,0 +1,23 @@
+{
+  "name": "html-tagged-template",
+  "version": "1.0.0",
+  "description": "Use tagged template literals strings for streamable server side rendering.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test --watch test.mjs"
+  },
+  "keywords": [
+    "html",
+    "ssr",
+    "templates"
+  ],
+  "author": {
+    "name": "Christopher Astfalk",
+    "email": "christopher.astfalk@icloud.com",
+    "url": "http://christopher-astfalk.de/"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "standard": "^17.1.0"
+  }
+}
