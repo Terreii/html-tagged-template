@@ -19,5 +19,8 @@
   "license": "ISC",
   "devDependencies": {
     "standard": "^17.1.0"
+  },
+  "dependencies": {
+    "escape-html": "^1.0.3"
   }
 }

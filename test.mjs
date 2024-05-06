@@ -3,9 +3,9 @@ import { test } from 'node:test'
 import { parse } from 'node:path'
 import standard from 'standard'
 
-import { html, renderToString, render } from './index.js'
+import { html, save, renderToString, render } from './index.js'
 
-test('standard formating', async t => {
+await test('standard formating', async t => {
   const results = await standard.lintFiles(['index.js', 'test.mjs'], { fix: true })
 
   for (const result of results) {
@@ -21,7 +21,7 @@ test('standard formating', async t => {
   }
 })
 
-test('basic use', async t => {
+await test('basic use', async t => {
   await t.test('should return an iterator', () => {
     const result = html`<h1>Hello World!</h1>`
 
@@ -49,5 +49,21 @@ test('basic use', async t => {
     const result = renderToString(iterator)
 
     assert.strictEqual(result, 'null undefined true false 0 1 some string test')
+  })
+})
+
+await test('html save', async t => {
+  await t.test('strings should get escaped', () => {
+    const iterator = html`${'<unsave>&'}`
+    const result = renderToString(iterator)
+
+    assert.strictEqual(result, '&lt;unsave&gt;&amp;')
+  })
+
+  await t.test('save function should mark strings as save', () => {
+    const iterator = html`${save('<unsave>&')} ${save('')}`
+    const result = renderToString(iterator)
+
+    assert.strictEqual(result, '<unsave>& ')
   })
 })
