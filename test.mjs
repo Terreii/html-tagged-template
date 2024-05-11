@@ -52,6 +52,58 @@ await test('basic use', async t => {
   })
 })
 
+await test('nesting', async t => {
+  await t.test('results of the html function can be used as argument', () => {
+    const innerIterator = html`<p>${'Text content'}</p>`
+    const iterator = html`<main><h1>${'Some Title'}</h1>${innerIterator}</main>`
+    const result = renderToString(iterator)
+
+    assert.strictEqual(result, '<main><h1>Some Title</h1><p>Text content</p></main>')
+  })
+
+  await t.test('iterators can be used as values', () => {
+    const iterator = (function * () {
+      yield 'a '
+      yield save('<br> ')
+      yield '<script> '
+      yield 5
+    })()
+    const result = renderToString(html`<p>${iterator}</p>`)
+
+    assert.strictEqual(result, '<p>a <br> &lt;script&gt; 5</p>')
+  })
+
+  await t.test('arrays can be used as values', () => {
+    const array = ['a ', save('<br> '), '<script> ', 5]
+    const result = renderToString(html`<p>${array}</p>`)
+
+    assert.strictEqual(result, '<p>a <br> &lt;script&gt; 5</p>')
+  })
+
+  await t.test('results of the html function can be used inside of an array', () => {
+    const array = [
+      { id: 1, text: 'Write Tests', done: false },
+      { id: 2, text: 'learn template literals', done: true },
+      { id: 3, text: 'Write blog post', done: false }
+    ]
+    const result = renderToString(html`<ul>${array.map(({ id, text, done }) => html`<li id="${id}">
+      <input type="checkbox" name="checked_${id} ${done ? 'checked' : ''}>
+      <span>${text}</span>
+    </li>`)}</ul>`)
+
+    assert.strictEqual(result, `<ul><li id="1">
+      <input type="checkbox" name="checked_1 >
+      <span>Write Tests</span>
+    </li><li id="2">
+      <input type="checkbox" name="checked_2 checked>
+      <span>learn template literals</span>
+    </li><li id="3">
+      <input type="checkbox" name="checked_3 >
+      <span>Write blog post</span>
+    </li></ul>`)
+  })
+})
+
 await test('html save', async t => {
   await t.test('strings should get escaped', () => {
     const iterator = html`${'<unsave>&'}`
