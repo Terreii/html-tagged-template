@@ -18,11 +18,11 @@ function html (strings, ...values) {
  * @param {string[]} strings  Strings of the template literal.
  * @param {any[]} values      Values embetted in the template literal.
  */
-function * innerHtml (strings, values) {
+async function * innerHtml (strings, values) {
   for (let i = 0, max = values.length; i < max; i++) {
     yield strings[i]
 
-    const [isIterator, value] = handleValue(values[i])
+    const [isIterator, value] = await handleValue(values[i])
     if (isIterator) {
       yield * value
     } else {
@@ -33,9 +33,9 @@ function * innerHtml (strings, values) {
   yield strings[strings.length - 1]
 }
 
-function * escapeIterator (iterator) {
-  for (const rawValue of iterator) {
-    const [isIterator, value] = handleValue(rawValue)
+async function * escapeIterator (iterator) {
+  for await (const rawValue of iterator) {
+    const [isIterator, value] = await handleValue(rawValue)
     if (isIterator) {
       yield * value
     } else {
@@ -47,9 +47,11 @@ function * escapeIterator (iterator) {
 /**
  * Checks the type of a value and stringifys it.
  * @param {any} value    Value to be handled.
- * @returns {[true, Iterable<string>] | [false, string]}
+ * @returns {Promise<[true, Iterable<string>] | [false, string]>}
  */
-function handleValue (value) {
+async function handleValue (value) {
+  value = await Promise.resolve(value)
+
   switch (typeof value) {
     case 'symbol':
       return [false, value.description]
@@ -60,7 +62,7 @@ function handleValue (value) {
     case 'object':
       if (value == null) return [false, String(value)]
 
-      if (typeof value.next === 'function' || value[Symbol.iterator]) {
+      if (typeof value.next === 'function' || value[Symbol.iterator] || value[Symbol.asyncIterator]) {
         const result = value[htmlSave] ? value : escapeIterator(value)
         return [true, result]
       } else if (value[htmlSave] && 'value' in value) {
@@ -83,9 +85,9 @@ function save (string) {
   return { value: string, [htmlSave]: true }
 }
 
-function renderToString (iterator) {
+async function renderToString (iterator) {
   let result = ''
-  for (const value of iterator) {
+  for await (const value of iterator) {
     result += value.toString()
   }
   return result

@@ -22,17 +22,23 @@ await test('standard formating', async t => {
 })
 
 await test('basic use', async t => {
-  await t.test('should return an iterator', () => {
+  await t.test('should return an async iterator', async () => {
     const result = html`<h1>Hello World!</h1>`
 
     assert.strictEqual(typeof result.next, 'function')
-    assert.deepStrictEqual(result.next(), { value: '<h1>Hello World!</h1>', done: false })
-    assert.deepStrictEqual(result.next(), { value: undefined, done: true })
+    const returnValue = result.next()
+    assert.strictEqual(typeof returnValue.then, 'function', 'should be a promise')
+    assert.deepStrictEqual(
+      await returnValue,
+      { value: '<h1>Hello World!</h1>', done: false },
+      'Promise should resolve an iterator result'
+    )
+    assert.deepStrictEqual(await result.next(), { value: undefined, done: true })
   })
 
-  await t.test('should return the end string part', () => {
+  await t.test('should return the end string part', async () => {
     const iterator = html`<h1>${'Hello!'}</h1>`
-    const result = renderToString(iterator)
+    const result = await renderToString(iterator)
 
     assert.strictEqual(result, '<h1>Hello!</h1>')
   })
@@ -44,43 +50,55 @@ await test('basic use', async t => {
     assert.strictEqual(result, '<h1>42</h1>')
   })
 
-  await t.test('should toString all primitive values', () => {
+  await t.test('should toString all primitive values', async () => {
     const iterator = html`${null} ${undefined} ${true} ${false} ${0} ${1n} ${'some string'} ${Symbol('test')}`
-    const result = renderToString(iterator)
+    const result = await renderToString(iterator)
 
     assert.strictEqual(result, 'null undefined true false 0 1 some string test')
   })
 })
 
 await test('nesting', async t => {
-  await t.test('results of the html function can be used as argument', () => {
+  await t.test('results of the html function can be used as argument', async () => {
     const innerIterator = html`<p>${'Text content'}</p>`
     const iterator = html`<main><h1>${'Some Title'}</h1>${innerIterator}</main>`
-    const result = renderToString(iterator)
+    const result = await renderToString(iterator)
 
     assert.strictEqual(result, '<main><h1>Some Title</h1><p>Text content</p></main>')
   })
 
-  await t.test('iterators can be used as values', () => {
+  await t.test('iterators can be used as values', async () => {
     const iterator = (function * () {
       yield 'a '
       yield save('<br> ')
       yield '<script> '
       yield 5
     })()
-    const result = renderToString(html`<p>${iterator}</p>`)
+    const result = await renderToString(html`<p>${iterator}</p>`)
 
     assert.strictEqual(result, '<p>a <br> &lt;script&gt; 5</p>')
   })
 
-  await t.test('arrays can be used as values', () => {
+  await t.test('should handle async iterators', async () => {
+    const iterator = (async function * () {
+      yield 'a '
+      yield save('<br> ')
+      yield await Promise.resolve('<script> ')
+      yield 5
+    })()
+    const result = await renderToString(html`<p>${iterator}</p>`)
+
+    assert.strictEqual(result, '<p>a <br> &lt;script&gt; 5</p>')
+  })
+
+  await t.test('arrays can be used as values', async () => {
     const array = ['a ', save('<br> '), '<script> ', 5]
-    const result = renderToString(html`<p>${array}</p>`)
+    const result = await renderToString(html`<p>${array}</p>`)
 
     assert.strictEqual(result, '<p>a <br> &lt;script&gt; 5</p>')
   })
 
-  await t.test('results of the html function can be used inside of an array', () => {
+  await t.test('results of the html function can be used inside of an array', async () => {
     const array = [
       { id: 1, text: 'Write Tests', done: false },
       { id: 2, text: 'learn template literals', done: true },
@@ -91,7 +109,7 @@ await test('nesting', async t => {
       <span>${text}</span>
     </li>`)}</ul>`)
 
-    assert.strictEqual(result, `<ul><li id="1">
+    assert.strictEqual(await result, `<ul><li id="1">
       <input type="checkbox" name="checked_1 >
       <span>Write Tests</span>
     </li><li id="2">
@@ -105,16 +123,16 @@ await test('nesting', async t => {
 })
 
 await test('html save', async t => {
-  await t.test('strings should get escaped', () => {
+  await t.test('strings should get escaped', async () => {
     const iterator = html`${'<unsave>&'}`
-    const result = renderToString(iterator)
+    const result = await renderToString(iterator)
 
     assert.strictEqual(result, '&lt;unsave&gt;&amp;')
   })
 
-  await t.test('save function should mark strings as save', () => {
+  await t.test('save function should mark strings as save', async () => {
     const iterator = html`${save('<unsave>&')} ${save('')}`
-    const result = renderToString(iterator)
+    const result = await renderToString(iterator)
 
     assert.strictEqual(result, '<unsave>& ')
   })
