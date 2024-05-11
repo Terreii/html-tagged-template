@@ -7,6 +7,77 @@ const escape = require('escape-html')
 
 const htmlSave = Symbol('save')
 
+/**
+ * A HTML save tagged template string function.
+ *
+ * Useage:
+ * ```javascript
+ * const result = html`<p>${content}</p>
+ * ```
+ *
+ * Renders a [Tagged template string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#tagged_templates).
+ *
+ * Use this function as a streaming, server rendered, build and eval free template engine.
+ *
+ * Every value is stringified. While strings are HTML-escaped.
+ * Unless they are marked as `save`.
+ *
+ * Iterators and Arrays are iterated.
+ *
+ * Nesting of html results is supported.
+ *
+ * Example:
+ * ```javascript
+ * import { html, save, render } from 'html-tagged-template'
+ *
+ * function post({ id, title, contentHtml }) {
+ *   return html`
+ *     ${header(title)}
+ *     <main id="${id}">
+ *       <h1>${title}</h1>
+ *
+ *       <div>
+ *         ${save(contentHtml)}
+ *       </div>
+ *     </main>
+ *
+ *     ${comments(id)}
+ *     ${footer()}
+ *   `
+ * }
+ *
+ * // A nested "Component".
+ * async function comments(postId) {
+ *   const comments = await db.comments.getAll({ postId })
+ *   return html`
+ *     <section>
+ *       <h2>Comments</h2>
+ *       ${comments.map(comment => html`
+ *         <div id="${comment.id}">
+ *           <span>${comment.name}</span>
+ *           <span>${comment.plainText}</span>
+ *         </div>
+ *       `)}
+ *     </section>
+ *   `
+ * }
+ *
+ * export default async function RenderPost(req) {
+ *   const postData = await db.posts.get(req.id)
+ *   const result = post(postData)
+ *
+ *   // Render into a Response object. This will stream the page.
+ *   return new Response(render(result), {
+ *     headers: {
+ *       "Content-Type": "text/html; charset=utf-8"
+ *     }
+ *   })
+ * }
+ * ```
+ * @param {TemplateStringsArray} strings   Template strings.
+ * @param  {...any} values                 Values intermixed in the template string.
+ * @returns {AsyncIterable<string>}
+ */
 function html (strings, ...values) {
   const iterator = innerHtml(strings, values)
   iterator[htmlSave] = true
@@ -77,7 +148,7 @@ async function handleValue (value) {
 }
 
 /**
- * Mark a string as save HTML. It will then not escaped in the html function.
+ * Mark a string as save HTML. It will then not get escaped in the `html` function.
  * @param {string} string   HTML save string.
  * @returns Object that is marked as save HTML.
  */
@@ -85,6 +156,18 @@ function save (string) {
   return { value: string, [htmlSave]: true }
 }
 
+/**
+ * Renders results of `html` into a string.
+ *
+ * Example:
+ * ```javascript
+ * const iterator = html`<p>Count: ${count}</p>`
+ * const htmlString = await renderToString(iterator)
+ * ```
+ * @param {Iterable<string>|AsyncIterable<string>} iterator  Iterator (or result of `html`)
+ * that should get rendered into a string.
+ * @returns {Promise<string>}
+ */
 async function renderToString (iterator) {
   let result = ''
   for await (const value of iterator) {
@@ -93,6 +176,24 @@ async function renderToString (iterator) {
   return result
 }
 
+/**
+ * Renders the result of `html` into a format usable for
+ * [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response).
+ *
+ * Example:
+ * ```javascript
+ * const result = html`<p>Count: ${count}</p>`
+ * const res = new Response(render(result), {
+ *   headers: {
+ *     "Content-Type": "text/html; charset=utf-8"
+ *   }
+ * })
+ * ```
+ *
+ * @param {Iterable<string>|AsyncIterable<string>} iterator Iterator (or result of `html`)
+ * that should get rendered into a Response.
+ * @returns {ReadableStream<Uint8Array>}
+ */
 function render (iterator) {
   return new ReadableStream({
     async pull (controller) {
